@@ -63,7 +63,7 @@ def create_app(config_name='default'):
     from customer.operator_manager import customer_operator_bp
     from customer.query_manager import query_bp
     
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(customer_bp, url_prefix='/customer')
     app.register_blueprint(operator_bp)
