@@ -1,0 +1,55 @@
+{
+  "cline.mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "请在此处填入GitHub Token"
+      }
+    },
+    
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "请在此处填入Brave Search API Key"
+      }
+    },
+    
+    "cloudflare": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-cloudflare"
+      ],
+      "env": {
+        "CLOUDFLARE_API_TOKEN": "请在此处填入Cloudflare API Token"
+      }
+    },
+    
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-context7"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": "请在此处填入Context7 API Key（如果需要）"
+      }
+    },
+    
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    }
+  }
+}
