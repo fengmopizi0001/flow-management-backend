@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}对账报表 - 流水管理系统{% endblock %}
+
+{% block content %}
+<style>
+    /* 桌面端布局样式 - 复用 view_records 的样式 */
+    @media (min-width: 769px) {
+        .records-filter-form .filter-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        
+        .records-filter-form .filter-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        
+        .records-filter-form .form-group {
+            margin-bottom: 0;
+        }
+        
+        .records-filter-form .date-picker-container {
+            display: flex;
+            gap: 5px;
+        }
+    }
+</style>
+<div class="card">
+    <div class="card-header">
+        <h2>💼 对账报表</h2>
+    </div>
+    <div class="card-body">
+        <!-- 筛选表单 -->
+        <form method="GET" style="margin-bottom: 20px;" class="records-filter-form">
+            <div class="filter-grid">
+                <!-- 第一行：客户 -->
+                <div class="filter-row row-1">
+                    <div class="form-group customer-group" style="width: 100%;">
+                        <label for="customer_id" class="form-label">客户</label>
+                        <select id="customer_id" name="customer_id" class="form-control form-select" onchange="this.form.submit()">
+                            <option value="">全部客户</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}" {% if selected_customer == customer.id %}selected{% endif %}>
+                                {{ customer.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 第二行：起始日期 -->
+                <div class="filter-row row-2">
+                    <div class="form-group">
+                        <label class="form-label">起始日期</label>
+                        <div class="date-picker-container" id="start_date_container">
+                            <select class="form-control year-select" name="start_year"></select>
+                            <select class="form-control month-select" name="start_month"></select>
+                            <select class="form-control day-select" name="start_day"></select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 第三行：结束日期 -->
+                <div class="filter-row row-3">
+                    <div class="form-group">
+                        <label class="form-label">结束日期</label>
+                        <div class="date-picker-container" id="end_date_container">
+                            <select class="form-control year-select" name="end_year"></select>
+                            <select class="form-control month-select" name="end_month"></select>
+                            <select class="form-control day-select" name="end_day"></select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 第四行：按钮 -->
+                <div class="filter-row row-4">
+                    <div class="filter-buttons">
+                        <button type="submit" class="btn btn-primary">🔍 筛选</button>
+                        <button type="button" class="btn btn-warning" onclick="clearDates()">📅 所有期数</button>
+                        <a href="{{ url_for('admin.reconciliation') }}" class="btn btn-secondary">🔄 重置</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <!-- 按客户统计 -->
+        <h3 style="margin: 20px 0 15px 0;">👥 按客户统计</h3>
+        {% if customer_stats %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>客户</th>
+                        <th>已完成笔数</th>
+                        <th>已完成金额</th>
+                        <th>总笔数</th>
+                        <th>总金额</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in customer_stats %}
+                    <tr>
+                        <td data-label="客户">{{ stat.username }}</td>
+                        <td data-label="已完成笔数">{{ stat.completed_count or 0 }} 笔</td>
+                        <td data-label="已完成金额">¥{{ "{:,.2f}".format(stat.completed or 0) }}</td>
+                        <td data-label="总笔数">{{ stat.total_count or 0 }} 笔</td>
+                        <td data-label="总金额">¥{{ "{:,.2f}".format(stat.total or 0) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <div class="empty-state-text">暂无客户数据</div>
+            <p>请先导入Excel或添加客户</p>
+        </div>
+        {% endif %}
+        
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-block-mobile">
+                返回仪表盘
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function setToday() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const day = today.getDate();
+        
+        // Format as YYYY-MM-DD
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        setDateSelects('start', dateStr);
+        setDateSelects('end', dateStr);
+    }
+
+    function setDateSelects(prefix, dateStr) {
+        // dateStr format: YYYY-MM-DD
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]); 
+            const day = parseInt(parts[2]);   
+            
+            // Helper to set value safely
+            const setVal = (name, val) => {
+                const el = document.querySelector(`select[name="${prefix}_${name}"]`);
+                if (el) {
+                    // For month/day, we might need padding or not depending on how options are generated
+                    if (name === 'month' || name === 'day') {
+                        el.value = String(val).padStart(2, '0');
+                    } else {
+                        el.value = val;
+                    }
+                }
+            };
+            
+            setVal('year', year);
+            setVal('month', month);
+            setVal('day', day);
+        }
+    }
+
+    function clearDates() {
+        // Clear all date selects
+        const selects = document.querySelectorAll('.year-select, .month-select, .day-select');
+        selects.forEach(select => {
+            select.value = '';
+        });
+        
+        // Also clear hidden inputs if any (though script.js handles syncing, we rely on form submission)
+        // script.js syncing works on 'change' event. 
+        // Manually trigger change or just submit? 
+        // If we just submit, the values might be sent as empty string or default?
+        // Wait, script.js might re-populate defaults if empty?
+        // Let's check script.js behavior. It sets defaults on init.
+        // If we set value to '', it might show empty.
+        
+        // However, the backend logic:
+        // start_date, end_date = parse_date_range_from_request(request)
+        // If params are empty, it returns None.
+        
+        // But the select elements might not have an empty option if generated by script.js?
+        // script.js generates 1-12, 1-31. It doesn't seem to have an empty option by default unless we add it.
+        // Actually, if we look at view_records, resetting usually involves redirecting.
+        
+        // If we want to submit "empty" dates, we need the selects to have empty values.
+        // Let's add empty option if not present? Or just redirect to URL with customer_id but without dates.
+        
+        const customerId = document.getElementById('customer_id').value;
+        let url = "{{ url_for('admin.reconciliation') }}";
+        if (customerId) {
+            url += "?customer_id=" + customerId;
+        }
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

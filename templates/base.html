@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#007bff">
+    <title>{% block title %}流水管理系统{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='2.1') }}">
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <nav class="navbar">
+        <div class="container nav-content">
+            {% if session.get('role') == 'admin' %}
+            <a href="{{ url_for('admin.dashboard') }}" class="nav-brand">💰 流水管理系统</a>
+            {% else %}
+            <a href="{{ url_for('customer.dashboard') }}" class="nav-brand">💰 流水管理系统</a>
+            {% endif %}
+            <div class="nav-links">
+                {% if session.get('role') == 'admin' %}
+                <a href="{{ url_for('admin.dashboard') }}" class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">仪表盘</a>
+                <a href="{{ url_for('admin.import_excel') }}" class="nav-link {% if request.endpoint == 'admin.import_excel' %}active{% endif %}">导入Excel</a>
+                <a href="{{ url_for('admin.add_target') }}" class="nav-link {% if request.endpoint == 'admin.add_target' %}active{% endif %}">添加目标</a>
+                <a href="{{ url_for('admin.add_record') }}" class="nav-link {% if request.endpoint == 'admin.add_record' %}active{% endif %}">录入流水</a>
+                <a href="{{ url_for('admin.view_records') }}" class="nav-link {% if request.endpoint == 'admin.view_records' %}active{% endif %}">查看记录</a>
+                <a href="{{ url_for('admin.customer_query_select') }}" class="nav-link {% if request.endpoint == 'admin.customer_query_select' or request.endpoint == 'admin.customer_query_view' %}active{% endif %}">客户流水查询</a>
+                <a href="{{ url_for('admin.reconciliation') }}" class="nav-link {% if request.endpoint == 'admin.reconciliation' %}active{% endif %}">对账报表</a>
+                {% else %}
+                <a href="{{ url_for('customer.dashboard') }}" class="nav-link {% if request.endpoint == 'customer.dashboard' %}active{% endif %}">仪表盘</a>
+                <a href="{{ url_for('customer.records') }}" class="nav-link {% if request.endpoint == 'customer.records' %}active{% endif %}">流水明细</a>
+                {% endif %}
+                {% if session.get('role') == 'admin' %}
+                <a href="javascript:void(0)" onclick="openChangeUsernameModal()" class="nav-link">修改用户名</a>
+                {% endif %}
+                <a href="javascript:void(0)" onclick="openChangePasswordModal()" class="nav-link">修改密码</a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link">退出</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="container" style="padding-top: 20px; padding-bottom: 20px;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 移动端底部导航 -->
+    {% if session.get('user_id') and session.get('role') == 'customer' %}
+    <nav class="bottom-nav">
+        <a href="{{ url_for('customer.dashboard') }}" class="bottom-nav-item {% if request.endpoint == 'customer.dashboard' %}active{% endif %}">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-text">仪表盘</span>
+        </a>
+        <a href="{{ url_for('customer.records') }}" class="bottom-nav-item {% if request.endpoint == 'customer.records' %}active{% endif %}">
+            <span class="bottom-nav-icon">📋</span>
+            <span class="bottom-nav-text">明细</span>
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="bottom-nav-item">
+            <span class="bottom-nav-icon">🚪</span>
+            <span class="bottom-nav-text">退出</span>
+        </a>
+    </nav>
+    {% endif %}
+
+    <!-- 新版操作员和渠道选择模态框 -->
+    <div id="operatorChannelModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title">选择操作员和支付渠道</h2>
+                <button type="button" class="modal-close" onclick="operatorChannelSelector.closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 操作员列表 -->
+                <div id="operatorListContainer">
+                    <p style="margin-bottom: 15px; color: #6c757d;">请选择操作员：</p>
+                    <div id="operatorOptions" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                        <!-- 操作员选项会动态加载 -->
+                    </div>
+                </div>
+                
+                <!-- 支付渠道列表 -->
+                <div id="channelContainer" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                    <p style="margin-bottom: 15px; color: #6c757d;">请选择支付渠道：</p>
+                    <div id="channelOptions" style="display: flex; flex-direction: column; gap: 10px;">
+                        <!-- 支付渠道选项会动态加载 -->
+                    </div>
+                </div>
+                
+                <!-- 新建操作员表单 -->
+                <div id="newOperatorFormContainer" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                    <p style="margin-bottom: 15px; color: #6c757d;">添加新操作员：</p>
+                    <div class="form-group">
+                        <label class="form-label">操作员姓名 *</label>
+                        <input type="text" id="newOperatorName" class="form-control" placeholder="输入操作员姓名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">支付渠道（可多选）</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="newChannels" value="微信支付"> 微信支付
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="newChannels" value="支付宝"> 支付宝
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" name="newChannels" value="其他"> 其他
+                            </label>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        <button type="button" id="saveOperatorBtn" class="btn btn-primary" style="flex: 1;">保存</button>
+                        <button type="button" id="cancelOperatorBtn" class="btn btn-secondary" style="flex: 1;">取消</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作人选择模态框 -->
+    <div id="operatorModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">选择操作员和渠道</h2>
+                <button type="button" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 操作人选择区域 - 可编辑下拉框 -->
+                <div class="form-group">
+                    <label for="operatorInput" class="form-label">选择操作人（可直接输入新操作员）</label>
+                    <input type="text" 
+                           id="operatorInput" 
+                           class="form-control" 
+                           list="operatorList"
+                           placeholder="选择或输入操作员姓名">
+                    <datalist id="operatorList">
+                        <!-- 历史操作人会自动加载 -->
+                    </datalist>
+                    <input type="hidden" id="operatorId" value="">
+                    
+                    <!-- 移动端：历史操作员快速选择 -->
+                    <div class="operator-quick-select">
+                        <div class="quick-select-label">或从历史中选择：</div>
+                        <div class="operator-tags" id="operatorTags">
+                            <!-- 操作员标签会动态加载 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #dee2e6;">
+                
+                <!-- 渠道选择区域 -->
+                <div class="form-group">
+                    <label class="form-label">选择支付渠道</label>
+                    <div class="channel-options-container">
+                        <label class="channel-option">
+                            <input type="radio" name="channel" value="1" data-channel-name="微信支付">
+                            <span class="channel-icon">💬</span>
+                            <span class="channel-name">微信支付</span>
+                        </label>
+                        <label class="channel-option">
+                            <input type="radio" name="channel" value="2" data-channel-name="支付宝">
+                            <span class="channel-icon">💳</span>
+                            <span class="channel-name">支付宝</span>
+                        </label>
+                        <label class="channel-option">
+                            <input type="radio" name="channel" value="3" data-channel-name="其他渠道">
+                            <span class="channel-icon">🔀</span>
+                            <span class="channel-name">其他渠道</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- 按钮组 -->
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" id="closeOperatorModalBtn" class="btn btn-secondary" style="flex: 1;">
+                        取消
+                    </button>
+                    <button type="button" id="confirmOperatorBtn" class="btn btn-primary" style="flex: 1;">
+                        保存
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改用户名模态框 -->
+    <div id="changeUsernameModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">修改用户名</h2>
+                <button type="button" class="modal-close" onclick="closeChangeUsernameModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changeUsernameForm">
+                    <div class="form-group">
+                        <label for="editCurrentUsername" class="form-label">当前用户名</label>
+                        <input type="text" 
+                               id="editCurrentUsername" 
+                               class="form-control" 
+                               value="{{ session.username }}"
+                               readonly
+                               disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="editNewUsername" class="form-label">新用户名 <span style="color: red;">*</span></label>
+                        <input type="text" 
+                               id="editNewUsername" 
+                               class="form-control" 
+                               placeholder="请输入新用户名"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editConfirmUsername" class="form-label">确认新用户名 <span style="color: red;">*</span></label>
+                        <input type="text" 
+                               id="editConfirmUsername" 
+                               class="form-control" 
+                               placeholder="请再次输入新用户名"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editUsernamePassword" class="form-label">密码 <span style="color: red;">*</span></label>
+                        <input type="password" 
+                               id="editUsernamePassword" 
+                               class="form-control" 
+                               placeholder="请输入当前密码"
+                               required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block-mobile">确认修改</button>
+                    <button type="button" class="btn btn-secondary btn-block-mobile" onclick="closeChangeUsernameModal()">取消</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改密码模态框 -->
+    <div id="changePasswordModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">修改密码</h2>
+                <button type="button" class="modal-close" onclick="closeChangePasswordModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label for="oldPassword" class="form-label">旧密码</label>
+                        <input type="password" 
+                               id="oldPassword" 
+                               class="form-control" 
+                               placeholder="请输入旧密码"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword" class="form-label">新密码</label>
+                        <input type="password" 
+                               id="newPassword" 
+                               class="form-control" 
+                               placeholder="请输入新密码"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword" class="form-label">确认新密码</label>
+                        <input type="password" 
+                               id="confirmPassword" 
+                               class="form-control" 
+                               placeholder="请再次输入新密码"
+                               required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block-mobile">确认修改</button>
+                    <button type="button" class="btn btn-secondary btn-block-mobile" onclick="closeChangePasswordModal()">取消</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+    // 打开修改用户名模态框
+    function openChangeUsernameModal() {
+        document.getElementById('changeUsernameModal').style.display = 'flex';
+        document.getElementById('editNewUsername').focus();
+    }
+    
+    // 关闭修改用户名模态框
+    function closeChangeUsernameModal() {
+        document.getElementById('changeUsernameModal').style.display = 'none';
+        document.getElementById('changeUsernameForm').reset();
+    }
+    
+    // 提交修改用户名表单
+    const changeUsernameForm = document.getElementById('changeUsernameForm');
+    if (changeUsernameForm) {
+        changeUsernameForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const newUsernameInput = document.getElementById('editNewUsername');
+            const confirmUsernameInput = document.getElementById('editConfirmUsername');
+            const passwordInput = document.getElementById('editUsernamePassword');
+            
+            const newUsername = newUsernameInput.value.trim();
+            const confirmUsername = confirmUsernameInput.value.trim();
+            const password = passwordInput.value;
+            
+            console.log('新用户名:', newUsername);
+            console.log('确认用户名:', confirmUsername);
+            console.log('密码:', password ? '***' : '空');
+            
+            // 验证新用户名
+            if (!newUsername) {
+                alert('请输入新用户名');
+                newUsernameInput.focus();
+                return;
+            }
+            
+            if (!confirmUsername) {
+                alert('请输入确认新用户名');
+                confirmUsernameInput.focus();
+                return;
+            }
+            
+            if (newUsername !== confirmUsername) {
+                alert('两次输入的用户名不一致\n\n新用户名：' + newUsername + '\n确认用户名：' + confirmUsername);
+                newUsernameInput.focus();
+                return;
+            }
+            
+            if (newUsername.length < 2) {
+                alert('用户名长度不能少于2个字符');
+                newUsernameInput.focus();
+                return;
+            }
+            
+            const currentUsername = '{{ session.username }}';
+            if (newUsername === currentUsername) {
+                alert('新用户名不能与当前用户名相同\n当前用户名：' + currentUsername);
+                newUsernameInput.focus();
+                return;
+            }
+            
+            if (!password) {
+                alert('请输入密码');
+                passwordInput.focus();
+                return;
+            }
+            
+            try {
+                const response = await fetch('/change_username', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        new_username: newUsername,
+                        confirm_username: confirmUsername,
+                        password: password
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('用户名修改成功！请重新登录');
+                    window.location.href = "{{ url_for('auth.logout') }}";
+                } else {
+                    alert(result.message || '修改失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('系统错误，请稍后重试');
+            }
+        });
+    }
+    
+    // 打开修改密码模态框
+    function openChangePasswordModal() {
+        document.getElementById('changePasswordModal').style.display = 'flex';
+        document.getElementById('oldPassword').focus();
+    }
+    
+    // 关闭修改密码模态框
+    function closeChangePasswordModal() {
+        document.getElementById('changePasswordModal').style.display = 'none';
+        document.getElementById('changePasswordForm').reset();
+    }
+    
+    // 提交修改密码表单
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // 验证新密码
+            if (newPassword !== confirmPassword) {
+                alert('两次输入的新密码不一致');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('新密码长度不能少于6位');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/change_password', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        old_password: oldPassword,
+                        new_password: newPassword
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('密码修改成功，请重新登录');
+                    window.location.href = "{{ url_for('auth.logout') }}";
+                } else {
+                    alert(result.error || '修改失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('系统错误，请稍后重试');
+            }
+        });
+    }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

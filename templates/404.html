@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}404 - 页面未找到{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 50px 20px;">
+    <div style="font-size: 80px; margin-bottom: 20px;">🔍</div>
+    <h1 style="color: #6c757d; margin-bottom: 20px;">404</h1>
+    <h2 style="margin-bottom: 20px;">页面未找到</h2>
+    <p style="color: #6c757d; margin-bottom: 30px;">
+        抱歉，您访问的页面不存在或已被移除。
+    </p>
+    <div>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">返回登录</a>
+    </div>
+</div>
+{% endblock %}

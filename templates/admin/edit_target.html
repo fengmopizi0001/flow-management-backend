@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}编辑月度目标 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>✏️ 编辑月度目标</h2>
+    </div>
+    <div class="card-body">
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label">客户</label>
+                <input type="text" class="form-control" value="{{ target.username }}" disabled>
+                <input type="hidden" name="customer_id" value="{{ target.customer_id }}">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">流水期数</label>
+                <input type="text" class="form-control" value="第 {{ target.period_number }} 期" disabled>
+                <input type="hidden" name="period_number" value="{{ target.period_number }}">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">时间范围</label>
+                <div class="input-group mb-2">
+                    <span class="input-group-text">开始</span>
+                    <input type="date" class="form-control" name="start_date" value="{{ target.start_date }}" required>
+                </div>
+                <div class="input-group">
+                    <span class="input-group-text">结束</span>
+                    <input type="date" class="form-control" name="end_date" value="{{ target.end_date }}" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="target_amount" class="form-label">目标金额 (元)</label>
+                <input type="number" step="0.01" class="form-control" id="target_amount" name="target_amount" value="{{ target.target_amount }}" required>
+            </div>
+            
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary btn-lg">💾 保存修改</button>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">返回仪表盘</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

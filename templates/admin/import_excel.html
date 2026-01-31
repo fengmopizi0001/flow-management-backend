@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}导入Excel - 流水管理系统{% endblock %}
+
+{% block content %}
+<style>
+    /* 手机端卡片式布局优化 */
+    .import-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .mode-switch-container {
+        display: flex;
+        background: #f0f2f5;
+        border-radius: 8px;
+        padding: 4px;
+        margin-bottom: 20px;
+    }
+
+    .mode-switch-option {
+        flex: 1;
+        text-align: center;
+        padding: 10px 0;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        color: #64748b;
+    }
+
+    .mode-switch-option.active {
+        background: #fff;
+        color: var(--primary-color);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .mode-switch-input {
+        display: none;
+    }
+
+    .file-upload-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 30px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #f8fafc;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .file-upload-area:hover, .file-upload-area.drag-over {
+        border-color: var(--primary-color);
+        background: #eff6ff;
+    }
+    
+    .file-upload-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+        display: block;
+    }
+    
+    .file-upload-text {
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 5px;
+    }
+    
+    .file-upload-hint {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+    
+    .file-input {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #334155;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .period-select-wrapper {
+        position: relative;
+    }
+    
+    .period-select-wrapper::after {
+        content: "▼";
+        font-size: 12px;
+        color: #64748b;
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary-custom {
+        background: var(--primary-color);
+        color: white;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+    }
+    
+    .btn-primary-custom:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .btn-secondary-custom {
+        background: #f1f5f9;
+        color: #475569;
+        margin-top: 10px;
+    }
+
+    /* 文件名显示区域 */
+    #file-name-display {
+        margin-top: 10px;
+        padding: 8px 12px;
+        background: #e2e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+        color: #334155;
+        display: none;
+        align-items: center;
+    }
+    
+    #file-name-display i {
+        margin-right: 8px;
+    }
+</style>
+
+<div class="import-card">
+    <div class="card-header" style="padding: 20px 20px 10px;">
+        <h2 style="margin: 0; font-size: 1.25rem;">📥 导入Excel月度流水表</h2>
+    </div>
+    <div class="card-body" style="padding: 20px;">
+        {% if success %}
+        <div class="alert alert-success">
+            <h3>✅ 导入成功！</h3>
+            <ul>
+                <li>客户：{{ customer_name }}</li>
+                <li>期数：第 {{ request.form.get('period_number', 1) }} 期</li>
+                <li>起始日期：{{ start_date }}</li>
+                <li>结束日期：{{ end_date }}</li>
+                <li>月度目标：¥{{ "{:,.2f}".format(total_amount) }}</li>
+                <li>流水记录：{{ record_count }} 笔</li>
+            </ul>
+            {% if is_new_user %}
+            <p style="margin-top: 15px;">
+                客户账户已创建，用户名：<strong>{{ customer_name }}</strong>，默认密码：<strong>123456</strong>
+            </p>
+            {% else %}
+            <p style="margin-top: 15px;">
+                已更新客户 <strong>{{ customer_name }}</strong> 的数据，旧数据已被覆盖
+            </p>
+            {% endif %}
+            <div style="margin-top: 20px;">
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary btn-block-mobile">返回仪表盘</a>
+                <a href="{{ url_for('admin.import_excel') }}" class="btn btn-secondary btn-block-mobile">继续导入</a>
+            </div>
+        </div>
+        {% else %}
+        
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST" enctype="multipart/form-data" id="importForm">
+            <!-- 模式切换 -->
+            <div class="mode-switch-container">
+                <label class="mode-switch-option active" id="option-new">
+                    <input type="radio" name="user_mode" value="new" class="mode-switch-input" checked onchange="toggleCustomerSelect(this)">
+                    🆕 新用户
+                </label>
+                <label class="mode-switch-option" id="option-existing">
+                    <input type="radio" name="user_mode" value="existing" class="mode-switch-input" onchange="toggleCustomerSelect(this)">
+                    👥 老用户
+                </label>
+            </div>
+            
+            <!-- 创建新用户时的自定义用户名输入 -->
+            <div id="new-username-input" class="form-group">
+                <label for="custom_username" class="form-label">用户名</label>
+                <input type="text" 
+                       id="custom_username" 
+                       name="custom_username" 
+                       class="form-control" 
+                       placeholder="请输入用户名..."
+                       style="padding: 12px;">
+                <small style="color: #94a3b8; display: block; margin-top: 5px;">
+                    如果不填写，将使用Excel中的客户名
+                </small>
+            </div>
+            
+            <!-- 选择已有用户 -->
+            <div id="existing-customer-select" class="form-group" style="display: none;">
+                <label for="existing_customer_id" class="form-label">选择客户</label>
+                <div class="period-select-wrapper">
+                    <select id="existing_customer_id" name="existing_customer_id" class="form-control" style="appearance: none; padding: 12px;">
+                        <option value="">-- 请选择客户 --</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}">{{ customer.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- 流水期数选择 -->
+            <div class="form-group">
+                <label for="period_number" class="form-label">流水期数</label>
+                <div class="period-select-wrapper">
+                    <select id="period_number" name="period_number" class="form-control" style="appearance: none; padding: 12px;">
+                        {% for i in range(1, 13) %}
+                        <option value="{{ i }}">第 {{ i }} 期</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 文件上传区域 -->
+            <div class="file-upload-area" id="drop-zone">
+                <input type="file" 
+                       id="file" 
+                       name="file" 
+                       class="file-input" 
+                       accept=".xlsx,.xls"
+                       required
+                       onchange="updateFileName(this)">
+                <span class="file-upload-icon">📂</span>
+                <div class="file-upload-text">点击选择Excel文件</div>
+                <div class="file-upload-hint">支持 .xlsx, .xls 格式</div>
+            </div>
+            
+            <div id="file-name-display">
+                <i>📄</i> <span id="file-name-text"></span>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <button type="submit" class="action-btn btn-primary-custom">
+                    📥 导入 Excel
+                </button>
+                
+                <a href="{{ url_for('admin.dashboard') }}" class="action-btn btn-secondary-custom" style="text-decoration: none; text-align: center;">
+                    返回仪表盘
+                </a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function toggleCustomerSelect(radio) {
+    var mode = radio.value;
+    var usernameDiv = document.getElementById('new-username-input');
+    var selectDiv = document.getElementById('existing-customer-select');
+    var optionNew = document.getElementById('option-new');
+    var optionExisting = document.getElementById('option-existing');
+    
+    // 切换样式
+    if (mode === 'new') {
+        optionNew.classList.add('active');
+        optionExisting.classList.remove('active');
+        usernameDiv.style.display = 'block';
+        selectDiv.style.display = 'none';
+    } else {
+        optionNew.classList.remove('active');
+        optionExisting.classList.add('active');
+        usernameDiv.style.display = 'none';
+        selectDiv.style.display = 'block';
+    }
+}
+
+function updateFileName(input) {
+    var fileNameDisplay = document.getElementById('file-name-display');
+    var fileNameText = document.getElementById('file-name-text');
+    var dropZone = document.getElementById('drop-zone');
+    
+    if (input.files && input.files[0]) {
+        fileNameText.textContent = input.files[0].name;
+        fileNameDisplay.style.display = 'flex';
+        dropZone.style.borderColor = 'var(--primary-color)';
+        dropZone.style.background = '#eff6ff';
+    } else {
+        fileNameDisplay.style.display = 'none';
+        dropZone.style.borderColor = '#cbd5e1';
+        dropZone.style.background = '#f8fafc';
+    }
+}
+
+// 拖拽效果
+var dropZone = document.getElementById('drop-zone');
+if (dropZone) {
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+        this.classList.remove('drag-over');
+    });
+}
+</script>
+{% endblock %}

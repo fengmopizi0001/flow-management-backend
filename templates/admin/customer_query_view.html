@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}查询流水 - {{ customer.username }} - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2>🔍 查询流水 - {{ customer.username }}</h2>
+        <a href="{{ url_for('admin.customer_query_select') }}" class="btn btn-secondary btn-sm">切换客户</a>
+    </div>
+    <div class="card-body">
+        <!-- 筛选表单 -->
+        <form id="queryForm" class="content-section">
+            <div class="form-group">
+                <label class="form-label">日期区间</label>
+                <div class="mobile-date-container">
+                    <div class="date-row">
+                        <label class="date-label">起始日期：</label>
+                        <div class="date-picker-container">
+                            <input type="hidden" id="startDate">
+                            <select class="form-control year-select" name="start_year"></select>
+                            <select class="form-control month-select" name="start_month"></select>
+                            <select class="form-control day-select" name="start_day"></select>
+                        </div>
+                    </div>
+                    <div class="date-row mt-3">
+                        <label class="date-label">结束日期：</label>
+                        <div class="date-picker-container">
+                            <input type="hidden" id="endDate">
+                            <select class="form-control year-select" name="end_year"></select>
+                            <select class="form-control month-select" name="end_month"></select>
+                            <select class="form-control day-select" name="end_day"></select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                 <button type="button" class="btn btn-info btn-sm mt-2" onclick="setQueryToday()">📅 设置为当前时间</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">操作员</label>
+                <select class="form-control" id="operatorSelect">
+                    <option value="">全部</option>
+                    <option value="self">自己</option>
+                    {% for operator in operators %}
+                    <option value="{{ operator.id }}">{{ operator.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">支付渠道</label>
+                <select class="form-control" id="channelSelect">
+                    <option value="">全部</option>
+                    <option value="0">不选择</option>
+                    <option value="1">微信支付</option>
+                    <option value="2">支付宝</option>
+                    <option value="3">其他渠道</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block-mobile">🔍 查询</button>
+        </form>
+    </div>
+</div>
+
+<!-- 查询结果 -->
+<div id="results" class="results-container">
+    <!-- 统计信息 -->
+    <div class="simple-stats">
+        <div class="simple-stat-item">
+            <div class="simple-stat-label">总记录数</div>
+            <div class="simple-stat-value" id="totalCount">0</div>
+        </div>
+        <div class="simple-stat-item">
+            <div class="simple-stat-label">总金额</div>
+            <div class="simple-stat-value" id="totalAmount">¥0</div>
+        </div>
+    </div>
+    
+    <!-- 结果表格 -->
+    <div class="card">
+        <div class="card-header">
+            <h3>查询结果</h3>
+        </div>
+        <div class="card-body">
+            <!-- 桌面端表格 -->
+            <div class="desktop-table table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>金额</th>
+                            <th>操作员</th>
+                            <th>支付渠道</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 移动端卡片 -->
+            <div id="mobileResults" class="mobile-results">
+            </div>
+            
+            <div id="noResults" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-text">未找到符合条件的记录</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 返回按钮 -->
+<div class="mt-4">
+    <a href="{{ url_for('admin.customer_query_select') }}" class="btn btn-secondary btn-block">
+        返回选择客户
+    </a>
+</div>
+
+<script>
+// 设置当前时间功能
+function setQueryToday() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    
+    // 查找所有相关的select并设置值
+    document.querySelectorAll('.year-select').forEach(el => el.value = year);
+    document.querySelectorAll('.month-select').forEach(el => el.value = month);
+    
+    // 更新天数选项（因为月份变了）
+    if (window.datePicker && window.datePicker.updateDays) {
+        window.datePicker.updateDays();
+    }
+    
+    // 然后设置天
+    setTimeout(() => {
+        document.querySelectorAll('.day-select').forEach(el => el.value = day);
+        // 触发change事件以更新隐藏input
+        document.querySelectorAll('.day-select').forEach(el => el.dispatchEvent(new Event('change')));
+    }, 0);
+}
+
+// 页面加载完成后，设置默认日期（最近30天）
+document.addEventListener('DOMContentLoaded', function() {
+    // 等待script.js初始化完成
+    setTimeout(() => {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        function setDateSelects(containerIdx, date) {
+            const containers = document.querySelectorAll('.date-picker-container');
+            if (containers.length > containerIdx) {
+                const container = containers[containerIdx];
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                
+                const yearSel = container.querySelector('.year-select');
+                const monthSel = container.querySelector('.month-select');
+                
+                if (yearSel) yearSel.value = year;
+                if (monthSel) monthSel.value = month;
+                
+                // 更新天数
+                if (window.datePicker && window.datePicker.updateDays) {
+                    window.datePicker.updateDays();
+                }
+                
+                setTimeout(() => {
+                    const daySel = container.querySelector('.day-select');
+                    if (daySel) {
+                        daySel.value = day;
+                        daySel.dispatchEvent(new Event('change'));
+                    }
+                }, 0);
+            }
+        }
+        
+        // 设置起始日期 (index 0)
+        setDateSelects(0, thirtyDaysAgo);
+        
+        // 设置结束日期 (index 1)
+        setDateSelects(1, today);
+    }, 100);
+});
+
+// 提交查询
+document.getElementById('queryForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    console.log('Form submitted');
+    
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const operatorId = document.getElementById('operatorSelect').value;
+    const channelId = document.getElementById('channelSelect').value;
+    
+    // 构建查询URL
+    const queryUrl = "{{ url_for('admin.customer_query_search', customer_id=customer.id) }}";
+    console.log('Query URL:', queryUrl);
+    
+    // 显示加载中
+    const btn = this.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⏳ 查询中...';
+    btn.disabled = true;
+    
+    try {
+        console.log('Sending request...');
+        const response = await fetch(queryUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                start_date: startDate,
+                end_date: endDate,
+                operator_id: operatorId,
+                channel_id: channelId
+            })
+        });
+        
+        console.log('Response status:', response.status);
+        const result = await response.json();
+        console.log('Result:', result);
+        
+        if (result.success) {
+            displayResults(result.records, result.stats);
+        } else {
+            alert('查询失败：' + (result.error || '未知错误'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('查询请求失败：' + error.message);
+    } finally {
+        // 恢复按钮状态
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+function displayResults(records, stats) {
+    // 显示统计信息
+    document.getElementById('totalCount').textContent = stats.total_count;
+    document.getElementById('totalAmount').textContent = '¥' + stats.total_amount.toLocaleString();
+    
+    // 显示结果区域
+    document.getElementById('results').style.display = 'block';
+    
+    // 填充表格
+    const tbody = document.getElementById('resultsTable');
+    tbody.innerHTML = '';
+    
+    if (records.length === 0) {
+        document.getElementById('noResults').style.display = 'block';
+        return;
+    }
+    
+    document.getElementById('noResults').style.display = 'none';
+    
+    // 填充表格（桌面端）
+    records.forEach(record => {
+        const row = document.createElement('tr');
+        
+        const statusClass = record.status === 'done' ? 'badge-success' : 'badge-warning';
+        const statusText = record.status === 'done' ? '已完成' : '待刷';
+        
+        row.innerHTML = `
+            <td>${record.date}</td>
+            <td>¥${record.amount.toLocaleString()}</td>
+            <td>${record.operator_name || '-'}</td>
+            <td>${record.channel_name || '-'}</td>
+            <td><span class="badge ${statusClass}">${statusText}</span></td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+
+    // 填充卡片（移动端）
+    const mobileContainer = document.getElementById('mobileResults');
+    mobileContainer.innerHTML = '';
+    
+    if (records.length === 0) {
+        return;
+    }
+    
+    records.forEach(record => {
+        const statusClass = record.status === 'done' ? 'badge-success' : 'badge-warning';
+        const statusText = record.status === 'done' ? '已完成' : '待刷';
+        const statusIcon = record.status === 'done' ? '✅' : '⏳';
+        
+        const card = document.createElement('div');
+        card.className = 'mobile-result-card';
+        card.innerHTML = `
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">📅</span> 日期</span>
+                <span class="result-card-value">${record.date}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">💰</span> 金额</span>
+                <span class="result-card-value">¥${record.amount.toLocaleString()}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">👤</span> 操作员</span>
+                <span class="result-card-value">${record.operator_name || '-'}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">📱</span> 渠道</span>
+                <span class="result-card-value">${record.channel_name || '-'}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">${statusIcon}</span> 状态</span>
+                <span class="result-card-value"><span class="badge ${statusClass}">${statusText}</span></span>
+            </div>
+        `;
+        mobileContainer.appendChild(card);
+    });
+}
+</script>
+{% endblock %}

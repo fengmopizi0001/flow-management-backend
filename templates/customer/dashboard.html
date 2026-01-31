@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}我的仪表盘 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📊 {{ session.username }}的流水仪表盘</h2>
+    </div>
+    <div class="card-body">
+        {% if latest_target %}
+        <div class="target-overview">
+            <div class="target-header">
+                <span class="target-badge">第 {{ latest_target.period_number }} 期</span>
+                <span class="target-period">{{ latest_target.start_date }} 至 {{ latest_target.end_date }}</span>
+            </div>
+            <div class="target-amount">目标：¥{{ "{:,.0f}".format(latest_target.target_amount) }}</div>
+            
+            <div class="progress-container">
+                <div class="progress-bar-fill {% if progress >= 100 %}completed{% endif %}" 
+                     style="width: {{ progress if progress <= 100 else 100 }}%"></div>
+            </div>
+            <div style="margin-top: 5px; text-align: right; font-size: 0.85rem; color: var(--gray-600);">
+                当前进度: {{ "{:.1f}".format(progress) }}%
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            暂无本月度目标，请联系管理员设置
+        </div>
+        {% endif %}
+
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card success">
+                <div class="stat-label">已刷流水</div>
+                <div class="stat-value">¥{{ "{:,.0f}".format(stats.completed or 0) }}</div>
+                <div class="stat-desc">{{ stats.completed_count or 0 if stats else 0 }} 笔交易</div>
+            </div>
+            
+            <div class="stat-card warning">
+                <div class="stat-label">待刷流水</div>
+                <div class="stat-value">¥{{ "{:,.0f}".format((stats.total or 0) - (stats.completed or 0)) }}</div>
+                <div class="stat-desc">{{ (stats.total_count or 0 if stats else 0) - (stats.completed_count or 0 if stats else 0) }} 笔交易</div>
+            </div>
+            
+            <div class="stat-card info">
+                <div class="stat-label">完成进度</div>
+                <div class="stat-value">{{ "{:.1f}".format(progress) }}%</div>
+                <div class="stat-desc">加油！</div>
+            </div>
+        </div>
+
+        <!-- 快捷操作 -->
+        <h3 style="margin: 20px 0 15px; font-size: 1.1rem; color: var(--gray-700);">⚡ 快捷操作</h3>
+        <div class="customer-actions">
+            <a href="{{ url_for('customer.records') }}" class="action-card">
+                <div class="action-icon">📋</div>
+                <div class="action-text">查看流水明细</div>
+            </a>
+            <a href="{{ url_for('customer_operator.index') }}" class="action-card">
+                <div class="action-icon">👥</div>
+                <div class="action-text">操作员管理</div>
+            </a>
+            <a href="{{ url_for('query.index') }}" class="action-card">
+                <div class="action-icon">🔍</div>
+                <div class="action-text">查询流水</div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

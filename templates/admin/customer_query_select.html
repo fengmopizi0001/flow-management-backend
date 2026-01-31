@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}客户流水查询 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>👥 选择客户查询</h2>
+    </div>
+    <div class="card-body">
+        <div class="form-group">
+            <label for="customer_select" class="form-label">请选择要查询的客户：</label>
+            <select id="customer_select" class="form-control form-select" onchange="if(this.value) window.location.href='{{ url_for('admin.customer_query_select') }}/' + this.value">
+                <option value="">-- 请选择客户 --</option>
+                {% for customer in customers %}
+                <option value="{{ customer.id }}">{{ customer.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="alert alert-info" style="margin-top: 20px;">
+            <p>选择客户后，将直接进入该客户的流水查询界面。</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

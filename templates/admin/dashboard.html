@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block title %}管理员仪表盘 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📊 管理员仪表盘</h2>
+    </div>
+    <div class="card-body">
+        <p>欢迎回来，{{ session.username }}！</p>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="stats-grid">
+    <div class="stat-card info">
+        <div class="stat-label">客户数量</div>
+        <div class="stat-value">{{ stats.customer_count or 0 }}</div>
+        <div>个</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-label">已刷流水</div>
+        <div class="stat-value">¥{{ "{:,.0f}".format(stats.completed or 0) }}</div>
+        <div>元</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">总流水</div>
+        <div class="stat-value">¥{{ "{:,.0f}".format(stats.total or 0) }}</div>
+        <div>元</div>
+    </div>
+</div>
+
+<!-- 客户详情面板 -->
+<div class="card" id="customer-detail-panel" style="display: none;">
+    <div class="card-header">
+        <h3>📊 <span id="detail-customer-name">客户名称</span> - 流水详情</h3>
+    </div>
+    <div class="card-body">
+        <div class="stats-grid">
+            <div class="stat-card success">
+                <div class="stat-label">已刷流水</div>
+                <div class="stat-value" id="detail-completed">¥0.00</div>
+            </div>
+            
+            <div class="stat-card warning">
+                <div class="stat-label">当日流水</div>
+                <div class="stat-value" id="detail-daily">¥0.00</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-label">总流水</div>
+                <div class="stat-value" id="detail-total">¥0.00</div>
+            </div>
+        </div>
+        
+        <!-- 当日完成度进度条 -->
+        <div style="margin-top: 20px;">
+            <div class="stat-label">当日完成度</div>
+            <div class="progress">
+                <div class="progress-bar" id="detail-progress" style="width: 0%">0%</div>
+            </div>
+            <div class="text-center" style="margin-top: 10px;">
+                <span id="detail-progress-text">完成度：0%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷操作 -->
+<div class="card">
+    <div class="card-header">
+        <h3>⚡ 快捷操作</h3>
+    </div>
+    <div class="card-body">
+        <div class="quick-actions-grid">
+            <a href="{{ url_for('admin.import_excel') }}" class="action-card">
+                <div class="action-icon">📥</div>
+                <div class="action-text">导入Excel</div>
+            </a>
+            <a href="{{ url_for('admin.add_record') }}" class="action-card">
+                <div class="action-icon">➕</div>
+                <div class="action-text">录入流水</div>
+            </a>
+            <a href="{{ url_for('admin.add_target') }}" class="action-card">
+                <div class="action-icon">🎯</div>
+                <div class="action-text">添加目标</div>
+            </a>
+            <a href="{{ url_for('admin.view_records') }}" class="action-card">
+                <div class="action-icon">📋</div>
+                <div class="action-text">查看记录</div>
+            </a>
+            <a href="{{ url_for('admin.reconciliation') }}" class="action-card">
+                <div class="action-icon">💼</div>
+                <div class="action-text">对账报表</div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 目标管理列表 -->
+<div class="card mb-4" style="margin-bottom: 20px;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0;">📊 目标管理列表 <small class="text-muted" style="font-size: 0.6em;">(共 {{ targets|length }} 条)</small></h3>
+        <a href="{{ url_for('admin.add_target') }}" class="btn btn-primary btn-sm">➕ 添加目标</a>
+    </div>
+    <div class="card-body">
+        {% if targets %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>用户</th>
+                        <th>期数</th>
+                        <th>时间范围</th>
+                        <th>目标金额</th>
+                        <th>完成进度</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for target in targets %}
+                    {% set completed = target.completed_amount or 0 %}
+                    {% set percent = (completed / target.target_amount * 100)|round(1) if target.target_amount > 0 else 0 %}
+                    <tr>
+                        <td><strong>{{ target.username }}</strong></td>
+                        <td><span class="badge badge-info" style="background-color: #17a2b8; color: white; padding: 0.25em 0.4em; border-radius: 0.25rem;">第 {{ target.period_number }} 期</span></td>
+                        <td>{{ target.start_date }} <br><span class="text-muted" style="font-size: 0.85em;">至</span><br> {{ target.end_date }}</td>
+                        <td>¥{{ "{:,.2f}".format(target.target_amount) }}</td>
+                        <td style="min-width: 150px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <div style="flex-grow: 1; background-color: #e9ecef; height: 10px; border-radius: 5px; margin-right: 10px; overflow: hidden;">
+                                    <div style="width: {{ percent if percent <= 100 else 100 }}%; background-color: {{ '#28a745' if percent >= 100 else '#007bff' }}; height: 100%;"></div>
+                                </div>
+                                <span style="font-size: 0.85em;">{{ percent }}%</span>
+                            </div>
+                            <small class="text-muted" style="font-size: 0.85em;">已完成: ¥{{ "{:,.2f}".format(completed) }}</small>
+                        </td>
+                        <td>
+                            {% if percent >= 100 %}
+                            <span class="badge badge-success" style="background-color: #28a745; color: white; padding: 0.25em 0.4em; border-radius: 0.25rem;">已达标</span>
+                            {% else %}
+                            <span class="badge badge-warning" style="background-color: #ffc107; color: black; padding: 0.25em 0.4em; border-radius: 0.25rem;">进行中</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin.edit_target', target_id=target.id) }}" class="btn btn-sm btn-primary" title="编辑">✏️</a>
+                            <form action="{{ url_for('admin.delete_target', target_id=target.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('⚠️ 确定要删除该目标吗？\n此操作不可恢复！');">
+                                <button type="submit" class="btn btn-sm btn-danger" title="删除">🗑️</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-center: center; padding: 20px; color: #6c757d; text-align: center;">
+            <p>暂无目标数据</p>
+            <a href="{{ url_for('admin.add_target') }}" class="btn btn-outline-primary btn-sm">立即添加</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 客户列表 -->
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0;">👥 客户列表</h3>
+        <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addUserModal">
+            ➕ 添加新用户
+        </button>
+    </div>
+    <div class="card-body">
+        {% if customers %}
+        <div class="table-responsive">
+            <table class="table customer-list-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>用户名</th>
+                    <th>角色</th>
+                    <th>注册时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td data-label="ID">{{ customer.id }}</td>
+                        <td data-label="用户名">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                <a href="javascript:void(0)" 
+                                   class="customer-link"
+                                   data-customer-id="{{ customer.id }}"
+                                   data-customer-name="{{ customer.username }}">
+                                    {{ customer.username }}
+                                </a>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="btn btn-primary btn-sm reset-password-btn" 
+                                            data-user-id="{{ customer.id }}" 
+                                            data-user-name="{{ customer.username }}"
+                                            title="重置密码">
+                                        🔄
+                                    </button>
+                                    <button class="btn btn-danger btn-sm delete-user-btn" 
+                                            data-user-id="{{ customer.id }}" 
+                                            data-user-name="{{ customer.username }}"
+                                            title="删除">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="角色">客户</td>
+                        <td data-label="注册时间">{{ customer.created_at[:10] }}</td>
+                        <td data-label="操作">
+                            <!-- 移动端隐藏此列，按钮已合并到用户名列 -->
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <div class="empty-state-text">暂无客户</div>
+            <p>请先导入Excel添加客户</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 添加新用户模态框 -->
+<div class="modal" id="addUserModal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>➕ 添加新用户</h3>
+            <button class="close" onclick="closeModal('addUserModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="newUsername">用户名 <span style="color: red;">*</span></label>
+                <input type="text" id="newUsername" class="form-control" placeholder="请输入用户名" required>
+            </div>
+            <div class="form-group">
+                <label for="newPassword">密码</label>
+                <input type="password" id="newPassword" class="form-control" placeholder="留空则默认密码为123456">
+                <small class="text-muted">留空则默认密码为123456</small>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('addUserModal')">取消</button>
+            <button type="button" class="btn btn-primary" onclick="addNewUser()">确定添加</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 打开模态框
+document.querySelectorAll('[data-target="#addUserModal"]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var modalId = this.getAttribute('data-target').replace('#', '');
+        document.getElementById(modalId).style.display = 'block';
+    });
+});
+
+// 关闭模态框
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    // 清空表单
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+}
+
+// 添加新用户
+function addNewUser() {
+    var username = document.getElementById('newUsername').value.trim();
+    var password = document.getElementById('newPassword').value.trim();
+    
+    // 验证用户名
+    if (!username) {
+        alert('请输入用户名！');
+        return;
+    }
+    
+    if (username.length < 2) {
+        alert('用户名至少需要2个字符！');
+        return;
+    }
+    
+    // 构建请求数据
+    var data = {
+        username: username
+    };
+    
+    if (password && password.trim() !== '') {
+        data.password = password;
+    }
+    
+    // 发送请求
+    fetch('/admin/api/add_customer', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            alert('用户 "' + result.username + '" 添加成功！\n默认密码：' + (password || '123456'));
+            closeModal('addUserModal');
+            // 重新加载页面
+            window.location.reload();
+        } else {
+            alert('添加失败：' + result.error);
+        }
+    })
+    .catch(function(error) {
+        console.error('添加失败:', error);
+        alert('添加失败，请重试');
+    });
+}
+
+// 点击模态框外部关闭
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+    }
+}
+// 客户链接点击事件
+document.querySelectorAll('.customer-link').forEach(function(link) {
+    link.addEventListener('click', function() {
+        var customerId = this.getAttribute('data-customer-id');
+        var customerName = this.getAttribute('data-customer-name');
+        
+        // 加载客户详情
+        loadCustomerDetail(customerId, customerName);
+    });
+});
+
+// 重置密码按钮事件
+document.querySelectorAll('.reset-password-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var userId = this.getAttribute('data-user-id');
+        var userName = this.getAttribute('data-user-name');
+        
+        var newPassword = prompt('请输入新密码（留空则重置为123456）：', '');
+        if (newPassword !== null) {
+            resetPassword(userId, userName, newPassword);
+        }
+    });
+});
+
+// 删除用户按钮事件
+document.querySelectorAll('.delete-user-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var userId = this.getAttribute('data-user-id');
+        var userName = this.getAttribute('data-user-name');
+        
+        if (confirm('确定要删除客户 "' + userName + '" 吗？\n\n此操作将同时删除该客户的所有流水记录和月度目标，且无法恢复！')) {
+            deleteUser(userId, this);
+        }
+    });
+});
+
+// 重置密码
+function resetPassword(userId, userName, newPassword) {
+    var data = {};
+    if (newPassword && newPassword.trim() !== '') {
+        data.password = newPassword.trim();
+    }
+    
+    fetch('/admin/reset_password/' + userId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            alert(result.message);
+        } else {
+            alert('重置失败：' + result.error);
+        }
+    })
+    .catch(function(error) {
+        console.error('重置失败:', error);
+        alert('重置失败，请重试');
+    });
+}
+
+// 加载客户详情
+function loadCustomerDetail(customerId, customerName) {
+    fetch('/api/customer/' + customerId + '/stats')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            // 更新客户名称
+            document.getElementById('detail-customer-name').textContent = customerName;
+            
+            // 更新统计数据
+            document.getElementById('detail-completed').textContent = 
+                '¥' + data.completed_flow.toLocaleString('zh-CN', {minimumFractionDigits: 2});
+            
+            document.getElementById('detail-daily').textContent = 
+                '¥' + data.daily_flow.toLocaleString('zh-CN', {minimumFractionDigits: 2});
+            
+            document.getElementById('detail-total').textContent = 
+                '¥' + data.total_flow.toLocaleString('zh-CN', {minimumFractionDigits: 2});
+            
+            // 更新当日完成度
+            var rate = data.daily_completion_rate.toFixed(1);
+            document.getElementById('detail-progress').style.width = rate + '%';
+            document.getElementById('detail-progress').textContent = rate + '%';
+            document.getElementById('detail-progress-text').textContent = '完成度：' + rate + '%';
+            
+            // 显示详情面板
+            document.getElementById('customer-detail-panel').style.display = 'block';
+            
+            // 滚动到详情面板
+            document.getElementById('customer-detail-panel').scrollIntoView({behavior: 'smooth'});
+        })
+        .catch(function(error) {
+            console.error('加载失败:', error);
+            alert('加载客户详情失败');
+        });
+}
+
+// 删除用户
+function deleteUser(userId, btnElement) {
+    fetch('/admin/delete_user/' + userId, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            alert('删除成功！');
+            // 重新加载页面
+            window.location.reload();
+        } else {
+            alert('删除失败：' + data.error);
+        }
+    })
+    .catch(function(error) {
+        console.error('删除失败:', error);
+        alert('删除失败，请重试');
+    });
+}
+</script>
+{% endblock %}

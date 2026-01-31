@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}查询流水 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>🔍 查询流水</h2>
+    </div>
+    <div class="card-body">
+        <!-- 筛选表单 -->
+        <form id="queryForm">
+            <div class="form-group">
+                <label class="form-label">日期区间</label>
+                <div class="mobile-date-container">
+                    <div class="date-row">
+                        <input type="date" class="form-control" id="startDate">
+                        <span class="date-separator">至</span>
+                    </div>
+                    <div class="date-row">
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">操作员</label>
+                <select class="form-control" id="operatorSelect">
+                    <option value="">全部</option>
+                    <option value="self">自己</option>
+                    {% for operator in operators %}
+                    <option value="{{ operator.id }}">{{ operator.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">支付渠道</label>
+                <select class="form-control" id="channelSelect">
+                    <option value="">全部</option>
+                    <option value="0">不选择</option>
+                    <option value="1">微信支付</option>
+                    <option value="2">支付宝</option>
+                    <option value="3">其他渠道</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block-mobile">🔍 查询</button>
+        </form>
+    </div>
+</div>
+
+<!-- 查询结果 -->
+<div id="results" style="display: none;">
+    <!-- 统计信息 -->
+    <div class="simple-stats">
+        <div class="simple-stat-item">
+            <div class="simple-stat-label">总记录数</div>
+            <div class="simple-stat-value" id="totalCount">0</div>
+        </div>
+        <div class="simple-stat-item">
+            <div class="simple-stat-label">总金额</div>
+            <div class="simple-stat-value" id="totalAmount">¥0</div>
+        </div>
+    </div>
+    
+    <!-- 结果表格 -->
+    <div class="card">
+        <div class="card-header">
+            <h3>查询结果</h3>
+        </div>
+        <div class="card-body">
+            <!-- 桌面端表格 -->
+            <div class="desktop-table" style="overflow-x: auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>状态</th>
+                            <th>日期</th>
+                            <th>金额</th>
+                            <th>操作员</th>
+                            <th>支付渠道</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTable">
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 移动端卡片 -->
+            <div id="mobileResults" class="mobile-results">
+            </div>
+            
+            <div id="noResults" style="display: none; text-align: center; padding: 40px; color: #999;">
+                <div style="font-size: 48px;">🔍</div>
+                <p>未找到符合条件的记录</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 返回按钮 -->
+<div style="margin-top: 20px;">
+    <a href="{{ url_for('customer.dashboard') }}" class="btn btn-secondary btn-block">
+        返回仪表盘
+    </a>
+</div>
+
+<script>
+// 设置默认日期（最近30天）
+const today = new Date();
+const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+document.getElementById('endDate').valueAsDate = today;
+document.getElementById('startDate').valueAsDate = thirtyDaysAgo;
+
+// 提交查询
+document.getElementById('queryForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const operatorId = document.getElementById('operatorSelect').value;
+    const channelId = document.getElementById('channelSelect').value;
+    
+    try {
+        const response = await fetch('/customer/query/search', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                start_date: startDate,
+                end_date: endDate,
+                operator_id: operatorId,
+                channel_id: channelId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            displayResults(result.records, result.stats);
+        } else {
+            alert('查询失败：' + result.error);
+        }
+    } catch (error) {
+        alert('查询失败：' + error.message);
+    }
+});
+
+function displayResults(records, stats) {
+    // 显示统计信息
+    document.getElementById('totalCount').textContent = stats.total_count;
+    document.getElementById('totalAmount').textContent = '¥' + stats.total_amount.toLocaleString();
+    
+    // 显示结果区域
+    document.getElementById('results').style.display = 'block';
+    
+    // 填充表格
+    const tbody = document.getElementById('resultsTable');
+    tbody.innerHTML = '';
+    
+    if (records.length === 0) {
+        document.getElementById('noResults').style.display = 'block';
+        return;
+    }
+    
+    document.getElementById('noResults').style.display = 'none';
+    
+    // 填充表格（桌面端）
+    records.forEach(record => {
+        const row = document.createElement('tr');
+        
+        const statusClass = record.status === 'done' ? 'badge-success' : 'badge-warning';
+        const statusText = record.status === 'done' ? '已完成' : '待刷';
+        
+        row.innerHTML = `
+            <td><span class="badge ${statusClass}">${statusText}</span></td>
+            <td>${record.date}</td>
+            <td>¥${record.amount.toLocaleString()}</td>
+            <td>${record.operator}</td>
+            <td>${record.channel}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // 填充卡片（移动端）
+    const mobileContainer = document.getElementById('mobileResults');
+    mobileContainer.innerHTML = '';
+    
+    if (records.length === 0) {
+        return;
+    }
+    
+    records.forEach(record => {
+        const statusClass = record.status === 'done' ? 'badge-success' : 'badge-warning';
+        const statusText = record.status === 'done' ? '已完成' : '待刷';
+        const statusIcon = record.status === 'done' ? '✅' : '⏳';
+        
+        const card = document.createElement('div');
+        card.className = 'mobile-result-card';
+        card.innerHTML = `
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">📅</span> 日期</span>
+                <span class="result-card-value">${record.date}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">💰</span> 金额</span>
+                <span class="result-card-value">¥${record.amount.toLocaleString()}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">👤</span> 操作员</span>
+                <span class="result-card-value">${record.operator || '-'}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">📱</span> 渠道</span>
+                <span class="result-card-value">${record.channel || '-'}</span>
+            </div>
+            <div class="result-card-row">
+                <span class="result-card-label"><span class="card-icon">${statusIcon}</span> 状态</span>
+                <span class="result-card-value"><span class="badge ${statusClass}">${statusText}</span></span>
+            </div>
+        `;
+        mobileContainer.appendChild(card);
+    });
+}
+</script>
+{% endblock %}

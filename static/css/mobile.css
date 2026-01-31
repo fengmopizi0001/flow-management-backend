@@ -1,0 +1,510 @@
+/* ===== 查询流水界面 - 移动端优化 ===== */
+
+/* 移动端：显示表格，隐藏卡片 */
+@media (max-width: 768px) {
+    .desktop-table {
+        display: block !important;
+        overflow-x: auto !important;
+    }
+    
+    .mobile-results {
+        display: none !important;
+    }
+    
+    /* 优化移动端表格 - 极简紧凑方案 */
+    .table {
+        font-size: 12px;
+        min-width: 280px; /* 更小的最小宽度 */
+        width: auto; /* 自动宽度，内容自适应 */
+        border-collapse: collapse;
+    }
+    
+    /* 设置每列的宽度 - 更紧凑 */
+    .table th:nth-child(1), .table td:nth-child(1) { /* 状态列 */
+        width: 45px;
+        text-align: center;
+    }
+    
+    .table th:nth-child(2), .table td:nth-child(2) { /* 日期列 */
+        width: 60px;
+    }
+    
+    .table th:nth-child(3), .table td:nth-child(3) { /* 金额列 */
+        width: 60px;
+        text-align: right;
+        font-size: 13px; /* 金额字体稍大 */
+        font-weight: 600; /* 金额加粗 */
+    }
+    
+    .table th:nth-child(4), .table td:nth-child(4) { /* 操作员列 */
+        width: 50px;
+    }
+    
+    .table th:nth-child(5), .table td:nth-child(5) { /* 渠道列 */
+        width: 50px;
+    }
+    
+    .table th {
+        padding: 3px 2px; /* 最小内边距 */
+        white-space: nowrap;
+        font-weight: 600;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6; /* 更细的底边框 */
+        border-right: none; /* 去掉列边框 */
+    }
+    
+    .table td {
+        padding: 2px 3px; /* 最小内边距 */
+        white-space: nowrap;
+        border-bottom: 1px solid #f1f3f5; /* 浅色分隔线 */
+        border-right: none; /* 去掉列边框 */
+        vertical-align: middle;
+    }
+    
+    /* 紧凑的徽章样式 */
+    .table td .badge {
+        font-size: 10px;
+        padding: 1px 4px;
+        display: inline-block;
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+    
+    /* 表格行高亮效果 */
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+}
+
+/* 桌面端：隐藏移动端卡片 */
+@media (min-width: 769px) {
+    .mobile-results {
+        display: none;
+    }
+}
+
+/* 移动端结果卡片 */
+.mobile-result-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    box-shadow: var(--shadow-sm);
+}
+
+/* 卡片行 */
+.card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.card-row:last-child {
+    border-bottom: none;
+}
+
+/* 卡片图标 */
+.card-icon {
+    font-size: 1.25rem;
+    margin-right: var(--space-sm);
+    min-width: 32px;
+}
+
+/* 卡片值 */
+.card-value {
+    flex: 1;
+    text-align: right;
+    font-size: 1rem;
+    color: var(--gray-800);
+    font-weight: 500;
+}
+
+/* 金额特殊样式 */
+.card-row:nth-child(2) .card-value {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+/* 移动端日期选择器 */
+@media (max-width: 768px) {
+    /* 日期容器 */
+    .mobile-date-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+    
+    /* 日期行 */
+    .date-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+    }
+    
+    .date-row input[type="date"] {
+        flex: 1;
+        min-height: 44px;
+        padding: 10px;
+        font-size: 15px;
+    }
+    
+    /* "至"分隔符 */
+    .date-separator {
+        color: var(--gray-600);
+        font-weight: 500;
+        font-size: 16px;
+        white-space: nowrap;
+        margin-left: var(--space-xs);
+    }
+    
+    /* 结果卡片优化 */
+    .mobile-result-card {
+        padding: var(--space-sm);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .card-row {
+        padding: 8px 0;
+    }
+    
+    .card-icon {
+        font-size: 1.1rem;
+        margin-right: var(--space-sm);
+        min-width: 28px;
+    }
+    
+    .card-value {
+        font-size: 0.9375rem;
+    }
+    
+    .card-row:nth-child(2) .card-value {
+        font-size: 1.1rem;
+    }
+    
+    /* 卡片中的徽章 */
+    .mobile-result-card .badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+}
+
+/* ===== 操作员管理页面 - 移动端优化 ===== */
+@media (max-width: 768px) {
+    /* 操作员网格：移动端保持3列布局，减小间距 */
+    .operator-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-sm);
+        margin-top: var(--space-md);
+    }
+    
+    /* 超小屏幕（iPhone SE等）改为2列 */
+    @media (max-width: 360px) {
+        .operator-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    /* 操作员卡片优化 */
+    .operator-card {
+        min-height: 70px;
+        padding: var(--space-sm);
+    }
+    
+    /* 操作员姓名：确保清晰可见 */
+    .operator-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: var(--space-xs) 0;
+        line-height: 1.3;
+    }
+    
+    /* 删除按钮优化 */
+    .btn-operator-delete {
+        min-height: 36px;
+        font-size: 0.8125rem;
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
+    /* 空状态优化 */
+    .empty-state {
+        padding: var(--space-lg) var(--space-md);
+    }
+    
+    .empty-state-icon {
+        font-size: 2.5rem;
+    }
+    
+    .empty-state-text {
+        font-size: 1rem;
+    }
+    
+    /* 提示信息框优化 */
+    .empty-state > div[style*="padding"] {
+        padding: var(--space-md) !important;
+        font-size: 0.9rem;
+    }
+}
+
+/* ===== 移动端表格转卡片 - 已移除，保持表格视图 ===== */
+/* 原卡片样式已删除，以满足用户"不使用卡片式视图"的需求 */
+
+
+/* ===== 管理员仪表盘移动端优化 ===== */
+@media (max-width: 768px) {
+    /* 快捷操作区：3列布局 */
+    .quick-actions-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-sm);
+    }
+    
+    .action-card {
+        padding: var(--space-sm);
+    }
+    
+    .action-icon {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+    
+    .action-text {
+        font-size: 0.75rem;
+    }
+
+    /* 客户列表表格适配 - 方案B：优化表格布局 */
+    .customer-list-table {
+        font-size: 0.85rem;
+    }
+    
+    /* 隐藏角色、注册时间和操作列 */
+    .customer-list-table th:nth-child(3),
+    .customer-list-table td:nth-child(3),
+    .customer-list-table th:nth-child(4),
+    .customer-list-table td:nth-child(4),
+    .customer-list-table th:nth-child(5),
+    .customer-list-table td:nth-child(5) {
+        display: none;
+    }
+    
+    /* 优化表格单元格 */
+    .customer-list-table td,
+    .customer-list-table th {
+        padding: 10px 8px;
+    }
+    
+    /* ID列：优化显示 */
+    .customer-list-table td[data-label="ID"],
+    .customer-list-table th:nth-child(1) {
+        min-width: 40px;
+        text-align: center;
+        font-weight: 500;
+    }
+    
+    /* 用户名列：优化显示，包含按钮 */
+    .customer-list-table td[data-label="用户名"] {
+        text-align: left;
+        padding: 10px;
+    }
+    
+    /* 用户名列中的容器：横向布局 */
+    .customer-list-table td[data-label="用户名"] > div {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+    }
+    
+    /* 用户名链接 */
+    .customer-list-table .customer-link {
+        text-decoration: none;
+        color: var(--gray-800);
+        font-weight: 600;
+        font-size: 0.95rem;
+        flex: 1;
+    }
+    
+    .customer-list-table .customer-link:hover {
+        color: var(--primary-color);
+    }
+    
+    /* 操作按钮容器 */
+    .customer-list-table td[data-label="用户名"] > div > div {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+    
+    /* 调整操作按钮 - 触摸优化 */
+    .customer-list-table .btn-sm {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 8px 12px;
+        font-size: 1.3rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        margin: 0;
+    }
+}
+
+/* ===== 管理员流水记录表移动端优化 ===== */
+@media (max-width: 768px) {
+    /* 隐藏ID列(第一列)和更新时间列(第七列) */
+    .records-table th:nth-child(1),
+    .records-table td:nth-child(1),
+    .records-table th:nth-child(7),
+    .records-table td:nth-child(7) {
+        display: none;
+    }
+}
+
+/* ===== 管理员流水记录筛选表单优化 ===== */
+@media (max-width: 768px) {
+    .records-filter-form .filter-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* 第一行：客户 + 期数 */
+    .records-filter-form .row-1 {
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+    
+    .records-filter-form .row-1 .customer-group {
+        flex: 2;
+        margin-bottom: 0 !important;
+    }
+    
+    .records-filter-form .row-1 .term-group {
+        flex: 1;
+        min-width: 100px;
+        margin-bottom: 0 !important;
+    }
+
+    /* 第二行、第三行：日期 */
+    .records-filter-form .row-2,
+    .records-filter-form .row-3 {
+        width: 100%;
+    }
+    
+    .records-filter-form .row-2 .form-group,
+    .records-filter-form .row-3 .form-group {
+        margin-bottom: 0 !important;
+    }
+
+    /* 日期选择器容器调整 - 全局通用 */
+    .date-picker-container {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .date-picker-container select {
+        padding: 6px;
+        font-size: 14px;
+        flex: 1;
+    }
+    
+    .date-picker-container .year-select {
+        flex: 1.3; /* 年份宽一点 */
+    }
+    
+    .records-filter-form .date-picker-container {
+        /* 保持原有特定样式（如果有） */
+    }
+
+    /* 第四行：按钮 */
+    .records-filter-form .row-4 .filter-buttons {
+        display: flex;
+        gap: 5px; /* 减小间距以容纳3个按钮 */
+        margin-top: 5px;
+    }
+    
+    .records-filter-form .row-4 .filter-buttons .btn {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 8px 4px; /* 减小内边距 */
+        font-size: 13px; /* 稍微减小字体 */
+        white-space: nowrap; /* 防止文字换行 */
+    }
+}
+
+/* ===== 操作员快速选择 - 移动端优化 ===== */
+.operator-quick-select {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+
+.quick-select-label {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.operator-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.operator-tag {
+    display: inline-block;
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.operator-tag:hover {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.operator-tag:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* 移动端触摸优化 */
+@media (max-width: 768px) {
+    .operator-tag {
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 14px;
+        font-size: 14px;
+    }
+}
+
+/* 桌面端隐藏快速选择（因为datalist已足够） */
+@media (min-width: 769px) {
+    .operator-quick-select {
+        display: none;
+    }
+}

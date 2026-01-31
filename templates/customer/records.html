@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}流水明细 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>📋 流水明细</h2>
+    </div>
+    <div class="card-body">
+        {% if target %}
+        <div class="target-overview">
+            <div class="target-header">
+                <span class="target-badge">本期目标</span>
+                <span class="target-period">{{ target.start_date }} 至 {{ target.end_date }}</span>
+            </div>
+            <div class="target-amount">
+                目标金额：¥{{ "{:,.0f}".format(target.target_amount) }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 筛选 -->
+        <form method="GET" id="filterForm" class="content-section">
+            <!-- 状态筛选 -->
+            <div class="form-group">
+                <label for="status" class="form-label">状态</label>
+                <select id="status" name="status" class="form-control form-select">
+                    <option value="">全部状态</option>
+                    <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>待刷</option>
+                    <option value="done" {% if status_filter == 'done' %}selected{% endif %}>已刷</option>
+                </select>
+            </div>
+
+            <!-- 起始日期 -->
+            <div class="form-group">
+                <label class="form-label">起始日期</label>
+                <div class="date-picker-container">
+                    <select class="form-control year-select" name="start_year"></select>
+                    <select class="form-control month-select" name="start_month"></select>
+                    <select class="form-control day-select" name="start_day"></select>
+                </div>
+            </div>
+
+            <!-- 结束日期 -->
+            <div class="form-group">
+                <label class="form-label">结束日期</label>
+                <div class="date-picker-container">
+                    <select class="form-control year-select" name="end_year"></select>
+                    <select class="form-control month-select" name="end_month"></select>
+                    <select class="form-control day-select" name="end_day"></select>
+                </div>
+            </div>
+            
+            <!-- 操作按钮 -->
+            <div style="display: flex; gap: 10px; margin-top: 15px; justify-content: flex-end;">
+                <button type="button" id="todayBtn" class="btn btn-success btn-sm">📅 今天</button>
+                <a href="{{ url_for('customer.records') }}" class="btn btn-secondary btn-sm">🔄 重置</a>
+                <button type="submit" class="btn btn-primary btn-sm">🔍 筛选</button>
+            </div>
+        </form>
+        
+        <!-- 记录列表 -->
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th width="100">状态操作</th>
+                        <th>日期</th>
+                        <th>金额</th>
+                        <th>操作人</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr data-record-id="{{ record.id }}">
+                        <td data-label="操作">
+                            <button class="btn btn-sm record-toggle-btn {% if record.status == 'done' %}btn-success{% else %}btn-danger{% endif %}" 
+                                    data-record-id="{{ record.id }}"
+                                    data-status="{{ record.status }}"
+                                    style="width: 80px;">
+                                {% if record.status == 'done' %}
+                                已刷
+                                {% else %}
+                                待刷
+                                {% endif %}
+                            </button>
+                        </td>
+                        <td data-label="日期">{{ record.date }}</td>
+                        <td data-label="金额" class="amount-cell">¥{{ "{:,.0f}".format(record.amount) }}</td>
+                        <td data-label="操作人" data-field="operator">
+                            {% if record.operator_name %}
+                                {{ record.operator_name }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-text">暂无符合条件的记录</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}查看记录 - 流水管理系统{% endblock %}
+
+{% block content %}
+<style>
+    /* 桌面端布局样式 */
+    @media (min-width: 769px) {
+        .records-filter-form .filter-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        
+        .records-filter-form .filter-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        
+        .records-filter-form .form-group {
+            margin-bottom: 0;
+        }
+        
+        .records-filter-form .customer-group { min-width: 150px; }
+        .records-filter-form .term-group { min-width: 120px; }
+        
+        .records-filter-form .date-picker-container {
+            display: flex;
+            gap: 5px;
+        }
+    }
+</style>
+<div class="card">
+    <div class="card-header">
+        <h2>📋 流水记录</h2>
+    </div>
+    <div class="card-body">
+        <!-- 筛选表单 -->
+        <form method="GET" style="margin-bottom: 20px;" class="records-filter-form">
+            <div class="filter-grid">
+                <!-- 第一行：客户和期数 -->
+                <div class="filter-row row-1">
+                    <div class="form-group customer-group">
+                        <label for="customer_id" class="form-label">客户</label>
+                        <select id="customer_id" name="customer_id" class="form-control form-select" onchange="this.form.submit()">
+                            <option value="">全部客户</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}" {% if selected_customer == customer.id %}selected{% endif %}>
+                                {{ customer.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="form-group term-group">
+                        <label for="term_select" class="form-label">期数</label>
+                        <select id="term_select" class="form-control form-select" onchange="applyTermDate(this)">
+                            <option value="">选择期数</option>
+                            {% if customer_targets %}
+                                {% for target in customer_targets %}
+                                <option value="{{ target.period_number }}" 
+                                        data-start="{{ target.start_date }}" 
+                                        data-end="{{ target.end_date }}">
+                                    第 {{ target.period_number }} 期 ({{ target.start_date }} ~ {{ target.end_date }})
+                                </option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- 第二行：起始日期 -->
+                <div class="filter-row row-2">
+                    <div class="form-group">
+                        <label class="form-label">起始日期</label>
+                        <div class="date-picker-container" id="start_date_container">
+                            <select class="form-control year-select" name="start_year"></select>
+                            <select class="form-control month-select" name="start_month"></select>
+                            <select class="form-control day-select" name="start_day"></select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 第三行：结束日期 -->
+                <div class="filter-row row-3">
+                    <div class="form-group">
+                        <label class="form-label">结束日期</label>
+                        <div class="date-picker-container" id="end_date_container">
+                            <select class="form-control year-select" name="end_year"></select>
+                            <select class="form-control month-select" name="end_month"></select>
+                            <select class="form-control day-select" name="end_day"></select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 第四行：按钮 -->
+                <div class="filter-row row-4">
+                    <div class="filter-buttons">
+                        <button type="submit" class="btn btn-primary">🔍 筛选</button>
+                        <button type="button" class="btn btn-info" onclick="setToday()">📅 当前时间</button>
+                        <a href="{{ url_for('admin.view_records') }}" class="btn btn-secondary">🔄 重置</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+        
+        <!-- 记录表格 -->
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table records-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>客户</th>
+                        <th>日期</th>
+                        <th>金额</th>
+                        <th>状态</th>
+                        <th>操作人</th>
+                        <th>更新时间</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td data-label="ID">{{ record.id }}</td>
+                        <td data-label="客户">{{ record.customer_name }}</td>
+                        <td data-label="日期">{{ record.date }}</td>
+                        <td data-label="金额">¥{{ "{:,.2f}".format(record.amount) }}</td>
+                        <td data-label="状态">
+                            {% if record.status == 'done' %}
+                            <span class="badge badge-success">已刷</span>
+                            {% else %}
+                            <span class="badge badge-pending">待刷</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="操作人">{{ record.operator_final_name or record.operator or '-' }}</td>
+                        <td data-label="更新时间">{{ record.updated_at[:19] if record.updated_at else '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <div class="empty-state-text">暂无记录</div>
+            <p>请先导入Excel或录入流水</p>
+        </div>
+        {% endif %}
+        
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-block-mobile">
+                返回仪表盘
+            </a>
+        </div>
+    </div>
+</div>
+
+    <script>
+    function setToday() {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        const day = today.getDate();
+        
+        // Format as YYYY-MM-DD
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        setDateSelects('start', dateStr);
+        setDateSelects('end', dateStr);
+    }
+
+    function applyTermDate(selectElement) {
+        const option = selectElement.options[selectElement.selectedIndex];
+        const startDate = option.getAttribute('data-start'); // YYYY-MM-DD
+        const endDate = option.getAttribute('data-end');     // YYYY-MM-DD
+        
+        if (startDate && endDate) {
+            setDateSelects('start', startDate);
+            setDateSelects('end', endDate);
+        }
+    }
+    
+    function setDateSelects(prefix, dateStr) {
+        // dateStr format: YYYY-MM-DD
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]); // 01 -> 1
+            const day = parseInt(parts[2]);   // 05 -> 5
+            
+            // Helper to set value safely
+            const setVal = (name, val) => {
+                const el = document.querySelector(`select[name="${prefix}_${name}"]`);
+                if (el) {
+                    // For month/day, we might need padding or not depending on how options are generated
+                    // script.js generates month/day with padding (01, 02) or not?
+                    // Let's check script.js again. 
+                    // Month: String(i).padStart(2, '0') -> "01"
+                    // Day: String(i).padStart(2, '0') -> "01" (Wait, need to check script.js)
+                    // script.js lines 415+: option.value = String(i).padStart(2, '0');
+                    
+                    // So we need to pad month and day
+                    if (name === 'month' || name === 'day') {
+                        el.value = String(val).padStart(2, '0');
+                    } else {
+                        el.value = val;
+                    }
+                }
+            };
+            
+            setVal('year', year);
+            setVal('month', month);
+            setVal('day', day);
+        }
+    }
+    </script>
+{% endblock %}

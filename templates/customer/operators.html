@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}操作员管理 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>👥 操作员管理</h2>
+    </div>
+    <div class="card-body">
+        <!-- 添加操作员表单 -->
+        <div class="content-section">
+            <h3 class="section-title">添加新操作员</h3>
+            <form id="addOperatorForm">
+                <div class="form-group">
+                    <label class="form-label" for="operatorName">操作员姓名 *</label>
+                    <input type="text" class="form-control" id="operatorName" placeholder="输入操作员姓名" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">➕ 添加操作员</button>
+            </form>
+        </div>
+        
+        <!-- 操作员列表 -->
+        {% if operators %}
+        <div class="mt-5">
+            <h3 class="section-title">我的操作员 <span style="font-size: 0.8rem; color: var(--gray-500);">（共 {{ operators|length }} 人）</span></h3>
+            
+            <div class="operator-grid">
+                {% for operator in operators %}
+                <div class="operator-card">
+                    <div class="operator-info">
+                        <h4 class="operator-name">{{ operator.name }}</h4>
+                    </div>
+                    <button class="btn btn-sm btn-danger btn-operator-delete" onclick="deleteOperator({{ operator.id }})">删除</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <div class="empty-state-text">暂无操作员</div>
+            <p>添加您的第一个操作员开始使用</p>
+            <div style="margin-top: 20px; padding: 15px; background: var(--primary-light); border-radius: var(--radius-md); border-left: 4px solid var(--primary-color);">
+                <strong style="color: var(--primary-color);">💡 提示：</strong>
+                <div style="margin-top: 10px; color: var(--gray-700); line-height: 1.6;">
+                    在上方输入操作员姓名并点击"添加操作员"按钮即可创建您的操作员列表。
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- 返回按钮 -->
+        <div class="mt-4">
+            <a href="{{ url_for('customer.dashboard') }}" class="btn btn-secondary btn-block-mobile">
+                返回仪表盘
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 提示信息 -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3>💡 使用说明</h3>
+    </div>
+    <div class="card-body">
+        <ul class="instruction-list">
+            <li>在这里添加您常用的操作员姓名（如：张三、李四等）</li>
+            <li>在标记流水时，可以从下拉列表中选择已保存的操作员</li>
+            <li>支付渠道（微信支付、支付宝、其他）在标记流水时单独选择</li>
+            <li>不选择操作员的流水将显示为"我自己操作"</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+// 添加操作员
+document.getElementById('addOperatorForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('operatorName').value.trim();
+    
+    if (!name) {
+        alert('请输入操作员姓名');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/customer/operators/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                name: name
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('操作员添加成功！');
+            location.reload();
+        } else {
+            alert('添加失败：' + result.error);
+        }
+    } catch (error) {
+        alert('添加失败：' + error.message);
+    }
+});
+
+// 删除操作员
+async function deleteOperator(operatorId) {
+    if (!confirm('确定要删除这个操作员吗？删除后无法恢复！')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/customer/operators/${operatorId}/delete`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('删除成功！');
+            location.reload();
+        } else {
+            alert('删除失败：' + result.error);
+        }
+    } catch (error) {
+        alert('删除失败：' + error.message);
+    }
+}
+
+</script>
+{% endblock %}

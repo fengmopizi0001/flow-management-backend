@@ -1,0 +1,332 @@
+/* ===== 登录页面 ===== */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    padding: 20px;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* ===== 管理员仪表盘 ===== */
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-md);
+}
+
+.action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    text-decoration: none;
+    color: var(--gray-800);
+    transition: all 0.3s ease;
+    aspect-ratio: 1; /* 正方形 */
+}
+
+.action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.action-icon {
+    font-size: 2rem;
+    margin-bottom: var(--space-sm);
+}
+
+.action-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+/* 状态颜色类 */
+.text-success { color: var(--success-color); }
+.text-warning { color: var(--warning-color); }
+.text-danger { color: var(--danger-color); }
+
+/* ===== 客户仪表盘优化 ===== */
+.target-overview {
+    background: var(--primary-light);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: var(--space-lg);
+}
+
+.target-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.target-badge {
+    background-color: var(--info-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.target-period {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+}
+
+.target-amount {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-top: var(--space-xs);
+}
+
+.progress-container {
+    height: 10px;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 5px;
+    margin-top: var(--space-md);
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    transition: width 0.6s ease;
+    background-color: var(--primary-color);
+}
+
+.progress-bar-fill.completed {
+    background-color: var(--success-color);
+}
+
+/* 快捷操作网格 - 客户版 */
+.customer-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+}
+
+@media (max-width: 768px) {
+    .customer-actions {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-sm);
+    }
+
+    /* 移动端优化：确保一行三个按钮能放下 */
+    .customer-actions .action-card {
+        padding: 10px 5px;
+        min-height: 90px;
+    }
+
+    .customer-actions .action-icon {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+
+    .customer-actions .action-text {
+        font-size: 0.8rem;
+        /* 允许文字在必要时换行，防止撑开容器 */
+        word-break: break-all; 
+        line-height: 1.2;
+    }
+}
+
+/* ===== 客户界面通用组件 ===== */
+.content-section {
+    background: var(--gray-50);
+    padding: var(--space-lg);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+
+.section-title {
+    margin-bottom: var(--space-md);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+/* 操作员卡片网格 - 一行3个 */
+.operator-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.operator-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    min-height: 80px;
+}
+
+.operator-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.operator-info {
+    width: 100%;
+    text-align: center;
+    margin-bottom: var(--space-sm);
+}
+
+.operator-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin: 0;
+    padding: var(--space-xs) 0;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+.btn-operator-delete {
+    width: 100%;
+    margin-top: auto;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.875rem;
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: var(--space-xl);
+    background: var(--gray-50);
+    border-radius: var(--radius-md);
+    color: var(--gray-500);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-sm);
+    font-weight: 500;
+}
+
+/* 移动端查询结果卡片 */
+.mobile-result-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.result-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+}
+
+.result-card-row:last-child {
+    margin-bottom: 0;
+}
+
+.result-card-label {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.result-card-value {
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+/* 说明列表 */
+.instruction-list {
+    padding-left: 20px;
+    line-height: 1.8;
+    color: var(--gray-700);
+}
+
+.instruction-list li {
+    margin-bottom: var(--space-xs);
+}
+
+/* ===== 辅助类 ===== */
+.d-flex { display: flex; }
+.justify-content-between { justify-content: space-between; }
+.align-items-center { align-items: center; }
+.mt-2 { margin-top: var(--space-xs); }
+.mt-3 { margin-top: var(--space-sm); }
+.mt-4 { margin-top: var(--space-lg); }
+.mt-5 { margin-top: var(--space-xl); }
+.table-responsive { overflow-x: auto; }
+
+/* 日期选择器标签 */
+.date-label {
+    font-size: 14px;
+    color: var(--gray-600);
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* 结果容器初始隐藏状态 */
+.results-container {
+    display: none;
+}
+
+.simple-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.simple-stat-item {
+    background: white;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--gray-200);
+    flex: 1;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.simple-stat-label {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-xs);
+}
+
+.simple-stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}

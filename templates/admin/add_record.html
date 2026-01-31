@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}录入流水 - 流水管理系统{% endblock %}
+
+{% block content %}
+<div class="card">
+            <div class="card-header">
+        <h2>➕ 录入流水记录</h2>
+    </div>
+    <div class="card-body">
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="customer_id" class="form-label">选择客户</label>
+                <select id="customer_id" name="customer_id" class="form-control form-select" required>
+                    <option value="">-- 请选择客户 --</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}">{{ customer.username }}</option>
+                    {% endfor %}
+                </select>
+            
+            <div class="form-group">
+                <label class="form-label">日期</label>
+                <div class="date-picker-container">
+                    <select class="form-control year-select" id="record_year" name="record_year"></select>
+                    <select class="form-control month-select" id="record_month" name="record_month"></select>
+                    <select class="form-control day-select" id="record_day" name="record_day"></select>
+                    <input type="hidden" id="date" name="date" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="amount" class="form-label">流水金额（元）</label>
+                <input type="number" 
+                       id="amount" 
+                       name="amount" 
+                       class="form-control" 
+                       placeholder="请输入流水金额"
+                       step="0.01"
+                       min="0"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="status" class="form-label">状态</label>
+                <select id="status" name="status" class="form-control form-select" required>
+                    <option value="done" selected>已刷</option>
+                    <option value="pending">待刷</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="operator_id" class="form-label">操作人</label>
+                <select id="operator_id" name="operator_id" class="form-control form-select">
+                    <option value="">-- 请先选择客户 --</option>
+                </select>
+                <small class="form-text text-muted">选择客户后自动加载关联的操作员</small>
+            </div>
+            
+                <button type="submit" class="btn btn-primary btn-block-mobile">
+                ➕ 添加流水
+            </button>
+            
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary btn-block-mobile">
+                返回
+            </a>
+        </form>
+        
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+            <p style="margin-bottom: 10px; font-weight: bold;">💡 提示：</p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li>系统会自动创建当日汇总记录</li>
+                <li>可以多次添加同一日期的流水</li>
+                <li>客户可以在流水明细页面查看并标记流水状态</li>
+            </ul>
+        </div>
+        
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function loadOperators(customerId) {
+                const operatorSelect = document.getElementById('operator_id');
+                operatorSelect.innerHTML = '<option value="">加载中...</option>';
+                operatorSelect.disabled = true;
+                
+                fetch(`/admin/operators/api/list/${customerId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        operatorSelect.innerHTML = '<option value="">-- 请选择操作员 --</option>';
+                        
+                        // 添加管理员选项
+                        const adminOption = document.createElement('option');
+                        adminOption.value = '999999';
+                        adminOption.textContent = '管理员';
+                        operatorSelect.appendChild(adminOption);
+                        
+                        if (data.operators && data.operators.length > 0) {
+                            data.operators.forEach(op => {
+                                const option = document.createElement('option');
+                                option.value = op.id;
+                                option.textContent = op.name;
+                                operatorSelect.appendChild(option);
+                            });
+                        } else {
+                            // 如果没有操作员，只显示管理员（上面已添加）和提示信息
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "该客户暂无其他操作员";
+                            option.disabled = true;
+                            operatorSelect.appendChild(option);
+                        }
+                        operatorSelect.disabled = false;
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        operatorSelect.innerHTML = '<option value="">加载失败</option>';
+                        operatorSelect.disabled = false;
+                    });
+            }
+
+            // 客户ID变更时，加载操作员
+            const customerSelect = document.getElementById('customer_id');
+            if (customerSelect) {
+                customerSelect.addEventListener('change', function() {
+                    const customerId = this.value;
+                    console.log('Customer selected:', customerId); // Debug
+                    if (customerId) {
+                        loadOperators(customerId);
+                    } else {
+                        document.getElementById('operator_id').innerHTML = '<option value="">-- 请先选择客户 --</option>';
+                    }
+                });
+            }
+        });
+        </script>
+    </div>
+</div>
+{% endblock %}
