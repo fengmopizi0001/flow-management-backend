@@ -54,8 +54,12 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True  # 生产环境启用HTTPS
     
     # 生产环境CORS配置
-    # 示例: CORS_ORIGINS = ['https://yourusername.github.io', 'https://your-frontend.com']
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', '').split(',') if os.getenv('CORS_ORIGINS') else []
+    # 允许的前端域名
+    CORS_ORIGINS = [
+        'https://fengmopizi0001.github.io',
+        'https://fengmopizi0001.github.io/flow-management-frontend',
+        '*'  # 允许所有来源（开发阶段，生产环境应该限制）
+    ]
 
 
 class TestingConfig(Config):
